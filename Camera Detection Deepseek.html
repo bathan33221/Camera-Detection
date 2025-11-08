@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Multi-Detection Camera App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+            background-color: #000;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #4285f4;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #toggleBtn.active {
+            background-color: #34a853;
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .results h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .detection-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-left: 4px solid #4285f4;
+            background-color: #f8f9fa;
+        }
+        .human-detection {
+            border-left-color: #ea4335;
+        }
+        .object-detection {
+            border-left-color: #fbbc05;
+        }
+        .card-detection {
+            border-left-color: #34a853;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4285f4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center;">Real-Time Multi-Detection Camera App</h1>
+        
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="toggleBtn">Start Detection</button>
+            <button id="switchCamera" disabled>Switch Camera</button>
+        </div>
+        
+        <div class="status" id="status">Initializing...</div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading models...</p>
+        </div>
+        
+        <div class="results">
+            <h3>Detection Results</h3>
+            <div id="detectionResults">
+                <p class="detection-item">Detection results will appear here.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let toggleBtn = document.getElementById('toggleBtn');
+        let switchCameraBtn = document.getElementById('switchCamera');
+        let status = document.getElementById('status');
+        let detectionResults = document.getElementById('detectionResults');
+        let loading = document.getElementById('loading');
+        
+        let stream = null;
+        let isDetecting = false;
+        let detectionInterval = null;
+        let objectModel = null;
+        let currentFacingMode = 'environment'; // 'user' for front, 'environment' for back
+        
+        // Initialize the application
+        async function init() {
+            try {
+                loading.classList.add('active');
+                status.textContent = 'Loading models...';
+                
+                // Load COCO-SSD model for object and human detection
+                // Human detection is part of object detection (COCO includes 'person' class)
+                objectModel = await cocoSsd.load();
+                status.textContent = 'Models loaded. Requesting camera access...';
+                
+                // Initialize camera
+                await initCamera();
+                
+                // Set canvas dimensions to match video
+                video.addEventListener('loadedmetadata', () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                });
+                
+                loading.classList.remove('active');
+                switchCameraBtn.disabled = false;
+                status.textContent = 'Ready. Click "Start Detection" to begin.';
+            } catch (error) {
+                console.error('Initialization error:', error);
+                status.textContent = `Error: ${error.message}`;
+                loading.classList.remove('active');
+            }
+        }
+        
+        // Initialize camera with specified facing mode
+        async function initCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            const constraints = {
+                video: {
+                    facingMode: currentFacingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                // Wait for video to be ready
+                await new Promise(resolve => {
+                    video.onloadeddata = resolve;
+                });
+            } catch (error) {
+                console.error('Camera error:', error);
+                status.textContent = `Camera error: ${error.message}`;
+                throw error;
+            }
+        }
+        
+        // Toggle detection on/off
+        function toggleDetection() {
+            if (isDetecting) {
+                // Stop detection
+                clearInterval(detectionInterval);
+                isDetecting = false;
+                toggleBtn.textContent = 'Start Detection';
+                toggleBtn.classList.remove('active');
+                status.textContent = 'Detection stopped.';
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            } else {
+                // Start detection
+                isDetecting = true;
+                toggleBtn.textContent = 'Stop Detection';
+                toggleBtn.classList.add('active');
+                status.textContent = 'Detection running...';
+                
+                // Run detection periodically
+                detectionInterval = setInterval(runDetection, 500); // Adjust interval for performance
+            }
+        }
+        
+        // Main detection function
+        async function runDetection() {
+            if (!objectModel || !isDetecting) return;
+            
+            try {
+                // Clear previous drawings
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Run object detection (includes humans)
+                const predictions = await objectModel.detect(video);
+                
+                // Filter predictions for humans and objects
+                const humans = predictions.filter(p => p.class === 'person');
+                const objects = predictions.filter(p => p.class !== 'person');
+                
+                // Draw bounding boxes and labels
+                drawDetections(humans, objects);
+                
+                // Update results display
+                updateResults(humans, objects);
+                
+                // Try to detect cards and perform OCR
+                await detectCardsAndOCR(objects);
+                
+            } catch (error) {
+                console.error('Detection error:', error);
+                status.textContent = `Detection error: ${error.message}`;
+            }
+        }
+        
+        // Draw bounding boxes and labels on canvas
+        function drawDetections(humans, objects) {
+            // Draw human detections in red
+            humans.forEach(prediction => {
+                const [x, y, width, height] = prediction.bbox;
+                ctx.strokeStyle = '#ea4335';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, width, height);
+                
+                ctx.fillStyle = '#ea4335';
+                ctx.font = '16px Arial';
+                ctx.fillText(
+                    `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
+                    x, y > 10 ? y - 5 : 10
+                );
+            });
+            
+            // Draw object detections in yellow
+            objects.forEach(prediction => {
+                const [x, y, width, height] = prediction.bbox;
+                ctx.strokeStyle = '#fbbc05';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, width, height);
+                
+                ctx.fillStyle = '#fbbc05';
+                ctx.font = '16px Arial';
+                ctx.fillText(
+                    `${prediction.class} (${Math.round(prediction.score * 100)}%)`,
+                    x, y > 10 ? y - 5 : 10
+                );
+            });
+        }
+        
+        // Update the detection results display
+        function updateResults(humans, objects) {
+            detectionResults.innerHTML = '';
+            
+            if (humans.length === 0 && objects.length === 0) {
+                detectionResults.innerHTML = '<p class="detection-item">No detections</p>';
+                return;
+            }
+            
+            // Add human detections
+            humans.forEach(human => {
+                const item = document.createElement('div');
+                item.className = 'detection-item human-detection';
+                item.innerHTML = `<strong>Human</strong>: ${Math.round(human.score * 100)}% confidence`;
+                detectionResults.appendChild(item);
+            });
+            
+            // Add object detections
+            objects.forEach(obj => {
+                const item = document.createElement('div');
+                item.className = 'detection-item object-detection';
+                item.innerHTML = `<strong>${obj.class}</strong>: ${Math.round(obj.score * 100)}% confidence`;
+                detectionResults.appendChild(item);
+            });
+        }
+        
+        // Detect cards and perform OCR
+        async function detectCardsAndOCR(objects) {
+            // Look for objects that might be cards/documents
+            const cardLikeObjects = objects.filter(obj => 
+                obj.class === 'book' || 
+                obj.class === 'cell phone' || 
+                obj.class === 'remote' ||
+                obj.score > 0.7  // High confidence objects might be documents
+            );
+            
+            if (cardLikeObjects.length === 0) return;
+            
+            // For simplicity, we'll process the first card-like object
+            const card = cardLikeObjects[0];
+            const [x, y, width, height] = card.bbox;
+            
+            // Draw card bounding box in green
+            ctx.strokeStyle = '#34a853';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, width, height);
+            
+            ctx.fillStyle = '#34a853';
+            ctx.font = '16px Arial';
+            ctx.fillText('CARD/ID', x, y > 10 ? y - 5 : 10);
+            
+            // Extract the card region from the canvas for OCR
+            try {
+                // Create a temporary canvas for the card region
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                
+                // Draw the card region to the temporary canvas
+                tempCtx.drawImage(
+                    video,
+                    x, y, width, height,
+                    0, 0, width, height
+                );
+                
+                // Perform OCR on the card region
+                const { data: { text } } = await Tesseract.recognize(
+                    tempCanvas,
+                    'eng',
+                    { 
+                        logger: m => console.log(m),
+                        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
+                    }
+                );
+                
+                // Display OCR results if text is found
+                if (text.trim()) {
+                    const item = document.createElement('div');
+                    item.className = 'detection-item card-detection';
+                    item.innerHTML = `<strong>Card Text</strong>: ${text.trim()}`;
+                    detectionResults.appendChild(item);
+                    
+                    // Draw OCR text near the card
+                    ctx.fillStyle = '#34a853';
+                    ctx.font = '14px Arial';
+                    const lines = text.trim().split('\n');
+                    lines.forEach((line, index) => {
+                        if (line.trim()) {
+                            ctx.fillText(
+                                line.trim(),
+                                x,
+                                y + height + 15 + (index * 15)
+                            );
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('OCR error:', error);
+            }
+        }
+        
+        // Switch between front and back cameras
+        async function switchCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            status.textContent = `Switching to ${currentFacingMode === 'environment' ? 'back' : 'front'} camera...`;
+            
+            // Stop current detection
+            if (isDetecting) {
+                toggleDetection();
+            }
+            
+            await initCamera();
+            
+            // Update canvas dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            status.textContent = `Camera switched. Click "Start Detection" to begin.`;
+        }
+        
+        // Event listeners
+        toggleBtn.addEventListener('click', toggleDetection);
+        switchCameraBtn.addEventListener('click', switchCamera);
+        
+        // Initialize the app when the page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
