@@ -3,30 +3,29 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Mobile Optimized Live Detector (Distance + Refine)</title>
+<title>Smart Mobile Detector — Continuous Detection</title>
 <style>
-  :root{--bg:#0b0b0b;--panel:#111;--accent:#4ee;--text:#e6f7ff}
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px}
-  header{width:100%;display:flex;justify-content:space-between;align-items:center}
-  h1{font-size:16px;margin:0}
-  #wrap{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center}
-  video{width:100%;height:auto;border-radius:12px;background:#000;transform:scaleX(-1)}
-  canvas{position:absolute;left:0;top:0;transform:scaleX(-1);pointer-events:none}
-  .viewer{position:relative;width:100%}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
-  button,input,select{padding:8px;border-radius:8px;border:0;background:var(--panel);color:var(--text)}
-  .info{font-size:13px;opacity:.9}
-  .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.5);padding:6px;border-radius:8px;font-weight:600}
-  .box-label{position:absolute;background:rgba(0,0,0,.6);color:var(--text);padding:4px 6px;border-radius:6px;font-size:13px}
-  footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
-  .small{font-size:12px;opacity:.9}
-  .calbox{display:flex;gap:6px;align-items:center}
+:root{--bg:#0b0b0b;--panel:#111;--accent:#4ee;--text:#e6f7ff}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px}
+header{width:100%;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:16px;margin:0}
+#wrap{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center}
+video{width:100%;height:auto;border-radius:12px;background:#000;}
+canvas{position:absolute;left:0;top:0;pointer-events:none}
+.viewer{position:relative;width:100%}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+button,input,select{padding:8px;border-radius:8px;border:0;background:var(--panel);color:var(--text)}
+.info{font-size:13px;opacity:.9}
+.badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.5);padding:6px;border-radius:8px;font-weight:600}
+footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
+.small{font-size:12px;opacity:.9}
+.calbox{display:flex;gap:6px;align-items:center}
 </style>
 </head>
 <body>
 <header>
-  <h1>Smart Mobile Detector — Smooth & Distance</h1>
-  <div class="info small">Optimized for phone — toggle detection & calibrate</div>
+  <h1>Smart Mobile Detector</h1>
+  <div class="info small">Continuous, smooth detection with distance</div>
 </header>
 
 <div id="wrap">
@@ -38,15 +37,15 @@
 
   <div class="controls">
     <button id="toggleBtn">Stop Detection</button>
-    <button id="calibrateBtn">Calibrate (required for distance)</button>
+    <button id="calibrateBtn">Calibrate (distance in meters)</button>
     <div class="calbox">
-      <input id="knownWidth" placeholder="Known width cm (e.g., 8.5)" style="width:110px" />
-      <input id="knownDistance" placeholder="Distance cm (e.g., 50)" style="width:110px" />
+      <input id="knownWidth" placeholder="Known width cm" style="width:110px" />
+      <input id="knownDistance" placeholder="Distance cm" style="width:110px" />
     </div>
     <select id="mode">
-      <option value="balanced">Balanced (default)</option>
-      <option value="fast">Fast (more FPS, less accuracy)</option>
-      <option value="accurate">Accurate (slower)</option>
+      <option value="balanced">Balanced</option>
+      <option value="fast">Fast</option>
+      <option value="accurate">Accurate</option>
     </select>
   </div>
 
@@ -55,30 +54,15 @@
     <div id="detcount">Detections: —</div>
     <div id="calinfo">Cal: not set</div>
   </div>
-
-  <div style="margin-top:8px;max-width:720px;text-align:left;color:#bcd">
-    <p class="small">How to calibrate (very important for distance): place a reference object (e.g., credit card width ~8.56 cm, or A4 short side 21 cm) at a known distance (use a ruler). Enter the real width (cm) and the distance (cm) then tap <strong>Calibrate</strong>. The page will compute focal length and will estimate distances for detected objects in metres.</p>
-  </div>
 </div>
 
-<footer>Tips: good lighting, steady camera, use Chrome. If something mislabels — try the <em>Accurate</em> mode.</footer>
+<footer>Tips: steady camera, good lighting. Calibrate for accurate distance. Works on mobile Chrome.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.4.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.2.1/dist/mobilenet.min.js"></script>
 
 <script>
-/*
-  Mobile-optimized detection + distance estimation + refinement:
-  - Uses coco-ssd for fast detection (bounding boxes).
-  - Uses mobilenet classifier to refine/correct coco labels for crops.
-  - Runs on a resized processing canvas to reduce load.
-  - Detection interval adjustable via mode.
-  - Distance requires calibration: focal = (pixelWidth * knownDistance) / realWidth
-    then distance = (realWidth * focal) / pixelWidth
-*/
-
-// HTML refs
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
 const status = document.getElementById('status');
@@ -87,288 +71,179 @@ const toggleBtn = document.getElementById('toggleBtn'), calibrateBtn = document.
 const knownWidthInput = document.getElementById('knownWidth'), knownDistanceInput = document.getElementById('knownDistance'), modeSel = document.getElementById('mode');
 
 let overlayCtx = overlay.getContext('2d');
-let model = null, classifier = null;
-let detecting = true;
-let lastTime = performance.now(), frames = 0, fps = 0;
-let detInterval = 300; // ms, will adjust by mode
-let focalLength = null; // px*cm (computed via calibration)
-let lastDetections = [];
-let processW = 320, processH = 240; // processing resolution (keeps perf stable)
-let refineThreshold = 0.5; // mobilenet confidence threshold to override
+let model=null, classifier=null;
+let detecting=true;
+let lastTime=performance.now(), frames=0, fps=0;
+let detInterval=250;
+let processW=320, processH=240;
+let focalLength=null;
+let lastDetections=[];
 
-// CATEGORY MAPS - optional user-friendly mapping
-const preferMap = {
-  // common mislabels we try to improve for household & fruits
-  'mouse': ['mouse','computer mouse'],
-  'helmet': ['helmet','hard hat'],
-  'chair': ['chair','dining table','sofa','couch'],
-  'bed': ['bed'],
-  'apple': ['apple','fruit'],
-  'banana': ['banana'],
-  'bottle': ['bottle'],
-  'person': ['person','man','woman']
-};
-
-// helper: try to pick better human-friendly label using mobilenet predictions + coco label
-function refineLabel(cocoLabel, cropTensor) {
-  // run mobilenet classify on the crop (tensor/HTMLCanvas)
-  // returns a promise resolving to refined label
-  if (!classifier) return Promise.resolve(cocoLabel);
-  return classifier.classify(cropTensor, 3).then(preds => {
-    if (!preds || preds.length===0) return cocoLabel;
-    // check highest prediction
-    const top = preds[0];
-    if (top.prob && top.prob > refineThreshold) {
-      // return top.className but simplified
-      const name = top.className.split(',')[0].toLowerCase();
-      // some mapping: if mobilenet recognizes 'helmet' or 'hard hat' prefer it
-      if (name.includes('helmet') || name.includes('hard hat')) return 'helmet';
-      if (name.includes('apple')) return 'apple';
-      if (name.includes('banana')) return 'banana';
-      if (name.includes('bed')) return 'bed';
-      if (name.includes('chair')||name.includes('sofa')||name.includes('couch')) return 'chair';
-      if (name.includes('bottle')) return 'bottle';
-      if (name.includes('person')||name.includes('man')||name.includes('woman')) return 'person';
-      // fallback: prefer mobilenet's cleaned label if it makes sense
-      // only return if it's short
-      const cleaned = name.split(' ')[0];
-      if (cleaned.length > 2 && cleaned.length < 20) return cleaned;
-    }
-    return cocoLabel;
-  }).catch(()=> cocoLabel);
-}
-
-// Set up camera
-async function startCamera() {
-  try {
-    await tf.setBackend('webgl'); // prefer webgl
-  } catch(e) { console.warn('webgl failed', e); }
-  const constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = stream;
+// Camera
+async function startCamera(){
+  try{await tf.setBackend('webgl');}catch(e){}
+  const constraints={video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false};
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject=stream;
     await video.play();
-    // size overlay to match video display size
-    resizeCanvases();
-    window.addEventListener('resize', resizeCanvases);
-  } catch (err) {
-    alert('Camera access denied or not available: ' + err.message);
-    status.innerText = 'Camera error';
-    throw err;
-  }
+    resizeCanvas();
+    window.addEventListener('resize',resizeCanvas);
+  }catch(e){alert('Camera access denied: '+e.message); status.innerText='Camera error'; throw e;}
 }
 
-// Resize overlay canvas to video display size
-function resizeCanvases() {
-  const w = video.clientWidth;
-  const h = video.clientHeight || (w * 3/4);
-  overlay.width = Math.floor(w);
-  overlay.height = Math.floor(h);
+function resizeCanvas(){
+  overlay.width=video.clientWidth;
+  overlay.height=video.clientHeight;
 }
 
 // Load models
-async function loadModels() {
-  status.innerText = 'Loading coco-ssd…';
-  model = await cocoSsd.load(); // fast detector
-  status.innerText = 'Loading mobilenet…';
-  classifier = await mobilenet.load(); // for refinement
-  status.innerText = 'Ready';
-  await warmup(); // warmup for smoother first run
+async function loadModels(){
+  status.innerText='Loading coco-ssd…';
+  model = await cocoSsd.load();
+  status.innerText='Loading mobilenet…';
+  classifier = await mobilenet.load();
+  status.innerText='Models ready';
+  await warmup();
 }
 
-// warm up by running a dummy predict
-async function warmup() {
-  const t = tf.zeros([1, processH, processW, 3]);
-  try { await tf.nextFrame(); t.dispose(); } catch(e){}
-}
+async function warmup(){const t=tf.zeros([1,processH,processW,3]);try{await tf.nextFrame();t.dispose();}catch(e){}}
 
-// detection loop: runs at interval to reduce CPU
-let loopHandle = null;
-async function detectionLoop() {
-  if (!detecting || !model) return;
-  const start = performance.now();
-
-  // draw scaled frame to offscreen canvas to lower work
-  const off = document.createElement('canvas');
-  off.width = processW; off.height = processH;
-  const offCtx = off.getContext('2d');
-  offCtx.drawImage(video, 0, 0, off.width, off.height);
-
-  // run detect on the small canvas
-  let predictions = [];
-  try {
-    predictions = await model.detect(off);
-  } catch(e) {
-    console.warn('detect err', e);
-    predictions = [];
-  }
-
-  // map back bbox coordinates to overlay size
-  const scaleX = overlay.width / off.width;
-  const scaleY = overlay.height / off.height;
-
-  // refine labels via mobilenet on cropped high-res region (from video)
-  const refined = await Promise.all(predictions.map(async p => {
-    // convert bbox from small canvas to original video pixels for a better crop
-    const [x,y,w,h] = p.bbox;
-    const vx = Math.max(0, Math.floor(x));
-    const vy = Math.max(0, Math.floor(y));
-    const vw = Math.max(2, Math.floor(w));
-    const vh = Math.max(2, Math.floor(h));
-
-    // create crop on a temporary canvas at slightly larger resolution for classifier
-    const cropCanvas = document.createElement('canvas');
-    // crop from the displayed video size (higher than offscreen)
-    const cropScaleX = video.videoWidth / off.width;
-    const cropScaleY = video.videoHeight / off.height;
-    const srcX = Math.floor(vx * cropScaleX), srcY = Math.floor(vy * cropScaleY);
-    const srcW = Math.floor(vw * cropScaleX), srcH = Math.floor(vh * cropScaleY);
-    cropCanvas.width = Math.min(224, srcW || 224);
-    cropCanvas.height = Math.min(224, srcH || 224);
-    const cctx = cropCanvas.getContext('2d');
-    try {
-      cctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, cropCanvas.width, cropCanvas.height);
-    } catch(e){
-      // fallback draw from off
-      cctx.drawImage(off, vx, vy, vw, vh, 0, 0, cropCanvas.width, cropCanvas.height);
+// Refine label
+function refineLabel(cocoLabel, cropTensor){
+  if(!classifier) return Promise.resolve(cocoLabel);
+  return classifier.classify(cropTensor,3).then(preds=>{
+    if(!preds || preds.length===0) return cocoLabel;
+    const top=preds[0];
+    if(top.prob && top.prob>0.5){
+      const name=top.className.split(',')[0].toLowerCase();
+      if(name.includes('helmet')) return 'helmet';
+      if(name.includes('apple')) return 'apple';
+      if(name.includes('banana')) return 'banana';
+      if(name.includes('bed')) return 'bed';
+      if(name.includes('chair')||name.includes('sofa')||name.includes('couch')) return 'chair';
+      if(name.includes('bottle')) return 'bottle';
+      if(name.includes('person')) return 'person';
+      return name;
     }
+    return cocoLabel;
+  }).catch(()=>cocoLabel);
+}
 
-    const refinedLabel = await refineLabel(p.class, cropCanvas).catch(()=>p.class);
-    return { ...p, refinedLabel };
+// Detection loop
+let loopHandle=null;
+async function detectionLoop(){
+  if(!detecting || !model) return;
+  const start=performance.now();
+
+  const off=document.createElement('canvas');
+  off.width=processW; off.height=processH;
+  const offCtx=off.getContext('2d');
+  offCtx.drawImage(video,0,0,off.width,off.height);
+
+  let predictions=[];
+  try{predictions=await model.detect(off);}catch(e){predictions=[];}
+
+  const scaleX=overlay.width/off.width;
+  const scaleY=overlay.height/off.height;
+
+  const refined=await Promise.all(predictions.map(async p=>{
+    const [x,y,w,h]=p.bbox;
+    const cropCanvas=document.createElement('canvas');
+    cropCanvas.width=Math.min(224,w); cropCanvas.height=Math.min(224,h);
+    const cctx=cropCanvas.getContext('2d');
+    cctx.drawImage(off,x,y,w,h,0,0,cropCanvas.width,cropCanvas.height);
+    const refinedLabel=await refineLabel(p.class,cropCanvas).catch(()=>p.class);
+    return {...p, refinedLabel};
   }));
 
-  lastDetections = refined;
-  drawDetections(refined, scaleX, scaleY);
+  lastDetections=refined;
+  drawDetections(refined,scaleX,scaleY);
 
-  // FPS calc
-  frames++; const now = performance.now();
-  if (now - lastTime >= 1000) { fps = Math.round((frames*1000)/(now-lastTime)); frames=0; lastTime=now; fpsEl.innerText = 'FPS: ' + fps; }
-  detcountEl.innerText = 'Detections: ' + refined.length;
+  frames++; const now=performance.now();
+  if(now-lastTime>=1000){fps=Math.round((frames*1000)/(now-lastTime));frames=0;lastTime=now;fpsEl.innerText='FPS: '+fps;}
+  detcountEl.innerText='Detections: '+refined.length;
 
-  // schedule next run depending on mode
-  const nowMs = performance.now();
-  const elapsed = nowMs - start;
-  const delay = Math.max(80, detInterval - elapsed); // at least 80ms gap
-  loopHandle = setTimeout(detectionLoop, delay);
+  const elapsed=performance.now()-start;
+  const delay=Math.max(80,detInterval-elapsed);
+  loopHandle=setTimeout(detectionLoop,delay);
 }
 
-// draw boxes and labels
-function drawDetections(preds, scaleX, scaleY) {
-  overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-  overlayCtx.lineWidth = Math.max(2, Math.round(overlay.width*0.004));
-  for (const p of preds) {
-    const [x,y,w,h] = p.bbox;
-    const sx = x*scaleX, sy = y*scaleY, sw = w*scaleX, sh = h*scaleY;
-    // choose color by class (simple hash)
-    const color = pickColor(p.refinedLabel || p.class);
-    overlayCtx.strokeStyle = color;
-    overlayCtx.fillStyle = color;
-    overlayCtx.beginPath();
-    overlayCtx.rect(sx, sy, sw, sh);
-    overlayCtx.stroke();
+// Draw boxes with fading
+function drawDetections(preds, scaleX, scaleY){
+  overlayCtx.fillStyle='rgba(0,0,0,0.15)';
+  overlayCtx.fillRect(0,0,overlay.width,overlay.height);
 
-    // compute distance if calibrated: we need pixel width measured on the same scale used for focal
-    let distanceText = '—';
-    if (focalLength && w > 2) {
-      // note: the pixelWidth used in calibration was measured on offscreen scale (processW)
-      // we need to compute pixel width in the same scale (off canvas)
-      const pixelWidthAtProcess = w; // because detection ran on off canvas where width is px w
-      // distance_cm = (realWidth_cm * focal) / pixelWidthAtProcess
-      const estimated_cm = (focalLength.realWidthCm * focalLength.focalPx) / Math.max(pixelWidthAtProcess,1);
-      const meters = (estimated_cm/100);
-      distanceText = meters > 0 ? meters.toFixed(2) + ' m' : '—';
+  overlayCtx.lineWidth=Math.max(2,Math.round(overlay.width*0.004));
+  for(const p of preds){
+    const [x,y,w,h]=p.bbox;
+    const sx=x*scaleX, sy=y*scaleY, sw=w*scaleX, sh=h*scaleY;
+    const color=pickColor(p.refinedLabel||p.class);
+    overlayCtx.strokeStyle=color; overlayCtx.fillStyle=color;
+    overlayCtx.beginPath(); overlayCtx.rect(sx,sy,sw,sh); overlayCtx.stroke();
+
+    let distanceText='—';
+    if(focalLength && w>2){
+      const pixelWidthAtProcess=w;
+      const estimated_cm=(focalLength.realWidthCm*focalLength.focalPx)/Math.max(pixelWidthAtProcess,1);
+      distanceText=(estimated_cm/100).toFixed(2)+' m';
     }
 
-    // label text: refined label (no percent) + distance
-    const label = (p.refinedLabel || p.class).toString();
-    const txt = label + ' • ' + distanceText;
+    const label=(p.refinedLabel||p.class).toString();
+    const txt=label+' • '+distanceText;
 
-    // draw filled label background
-    overlayCtx.font = `${Math.max(12, Math.round(overlay.width*0.03))}px sans-serif`;
-    const txtW = overlayCtx.measureText(txt).width;
-    const pad = 6;
-    overlayCtx.fillStyle = hexToRgba(color, 0.85);
-    overlayCtx.fillRect(sx, Math.max(0, sy - 24), txtW + pad*2, 22);
-    overlayCtx.fillStyle = '#000';
-    overlayCtx.fillText(txt, sx + pad, Math.max(14, sy - 6));
+    overlayCtx.font=`${Math.max(12,Math.round(overlay.width*0.03))}px sans-serif`;
+    const txtW=overlayCtx.measureText(txt).width; const pad=6;
+    overlayCtx.fillStyle=hexToRgba(color,0.85);
+    overlayCtx.fillRect(sx,Math.max(0,sy-24),txtW+pad*2,22);
+    overlayCtx.fillStyle='#000'; overlayCtx.fillText(txt,sx+pad,Math.max(14,sy-6));
   }
 }
 
-// helper color
-function pickColor(name) {
-  let h = 0;
-  for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
-  return `hsl(${h}deg 90% 60%)`;
-}
-function hexToRgba(hsl, a=1) {
-  // hsl string -> approximate rgba via canvas
-  const c = document.createElement('canvas'); c.width=1;c.height=1;
-  const cx = c.getContext('2d');
-  cx.fillStyle = hsl;
-  cx.fillRect(0,0,1,1);
-  const d = cx.getImageData(0,0,1,1).data;
-  return `rgba(${d[0]},${d[1]},${d[2]},${a})`;
+// Helpers
+function pickColor(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%360;return`hsl(${h}deg 90% 60%)`;}
+function hexToRgba(hsl,a=1){const c=document.createElement('canvas');c.width=1;c.height=1;const cx=c.getContext('2d');cx.fillStyle=hsl;cx.fillRect(0,0,1,1);const d=cx.getImageData(0,0,1,1).data;return`rgba(${d[0]},${d[1]},${d[2]},${a})`;}
+
+// Calibration
+function calibrateFromUI(){
+  const kw=parseFloat(knownWidthInput.value), kd=parseFloat(knownDistanceInput.value);
+  if(!kw||!kd){alert('Enter known width & distance');return;}
+  if(!lastDetections||lastDetections.length===0){alert('Show reference object');return;}
+  let best=lastDetections.reduce((a,b)=>(b.bbox[2]>a.bbox[2]?b:a),lastDetections[0]);
+  const pixelWidth=best.bbox[2];
+  const focalPx=(pixelWidth*kd)/kw;
+  focalLength={focalPx, realWidthCm:kw, knownDistanceCm:kd};
+  calinfo.innerText=`Cal: W=${kw}cm @ ${kd}cm`;
+  status.innerText='Calibrated — distances in meters';
 }
 
-// calibration: compute focal length using known real width and distance
-// focalPx = (pixelWidth * knownDistance) / realWidth
-// store focalPx and realWidth
-function calibrateFromUI() {
-  const kw = parseFloat(knownWidthInput.value);
-  const kd = parseFloat(knownDistanceInput.value);
-  if (!kw || !kd) { alert('Enter known width (cm) and distance (cm)'); return; }
-  // require one detection to measure pixel width - use the largest detection as reference
-  if (!lastDetections || lastDetections.length === 0) { alert('Show the reference object in the camera view and wait for detection (or set a clear bounding box object).'); return; }
-  // choose detection with largest bbox width
-  let best = lastDetections.reduce((a,b)=> (b.bbox[2]>a.bbox[2]?b:a), lastDetections[0]);
-  const pixelWidth = best.bbox[2]; // pixel width on process canvas
-  // compute focal
-  const focalPx = (pixelWidth * kd) / kw;
-  focalLength = { focalPx, realWidthCm: kw, knownDistanceCm: kd };
-  calinfo.innerText = `Cal: W=${kw}cm @ ${kd}cm (ok)`;
-  status.innerText = 'Calibrated — distances in metres';
-}
-
-// UI handlers
-toggleBtn.addEventListener('click', ()=> {
-  detecting = !detecting;
-  toggleBtn.innerText = detecting ? 'Stop Detection' : 'Start Detection';
-  if (detecting) detectionLoop();
-  else { if (loopHandle) clearTimeout(loopHandle); status.innerText = 'Paused'; overlayCtx.clearRect(0,0,overlay.width,overlay.height); }
+// UI
+toggleBtn.addEventListener('click',()=>{
+  detecting=!detecting; toggleBtn.innerText=detecting?'Stop Detection':'Start Detection';
+  if(detecting)detectionLoop();
+  else{if(loopHandle)clearTimeout(loopHandle);status.innerText='Paused';overlayCtx.clearRect(0,0,overlay.width,overlay.height);}
+});
+calibrateBtn.addEventListener('click',calibrateFromUI);
+modeSel.addEventListener('change',()=>{
+  const m=modeSel.value;
+  if(m==='fast'){detInterval=150;processW=240;processH=160;}
+  else if(m==='accurate'){detInterval=400;processW=480;processH=360;}
+  else{detInterval=250;processW=320;processH=240;}
 });
 
-calibrateBtn.addEventListener('click', calibrateFromUI);
-
-modeSel.addEventListener('change', ()=> {
-  const m = modeSel.value;
-  if (m === 'fast') { detInterval = 160; processW = 240; processH = 160; refineThreshold = 0.55; }
-  else if (m === 'accurate') { detInterval = 450; processW = 480; processH = 320; refineThreshold = 0.35; }
-  else { detInterval = 300; processW = 320; processH = 240; refineThreshold = 0.5; }
-});
-
-// initialization
+// Init
 (async function init(){
-  try {
-    status.innerText = 'Starting camera…';
+  try{
+    status.innerText='Starting camera…';
     await startCamera();
-    status.innerText = 'Loading models (may take a few seconds)…';
+    status.innerText='Loading models…';
     await loadModels();
-    status.innerText = 'Models loaded — starting detection';
-    // start detection loop
+    status.innerText='Models loaded — starting detection';
     detectionLoop();
-  } catch(e){
-    status.innerText = 'Init failed: ' + (e.message || e);
-    console.error(e);
-  }
+  }catch(e){status.innerText='Init failed: '+(e.message||e);console.error(e);}
 })();
 
-// clean up before unload
-window.addEventListener('beforeunload', ()=> {
-  try {
-    const s = video.srcObject;
-    if (s) s.getTracks().forEach(t=>t.stop());
-  } catch(e){}
-});
+window.addEventListener('beforeunload',()=>{try{const s=video.srcObject;if(s)s.getTracks().forEach(t=>t.stop());}catch(e){}});
 </script>
 </body>
 </html>
