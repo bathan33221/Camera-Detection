@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Smart Mobile Detector — Clean & Accurate</title>
+<title>Mobile Object Detector — Full Fix</title>
 <style>
 body{margin:0;font-family:system-ui,Roboto,Arial;background:#0b0b0b;color:#e6f7ff;display:flex;flex-direction:column;align-items:center;padding:10px;gap:8px}
 header{width:100%;display:flex;justify-content:space-between;align-items:center}
@@ -23,7 +23,7 @@ footer{font-size:12px;color:#9aa;margin-top:6px;text-align:center}
 </head>
 <body>
 <header>
-  <h1>Smart Mobile Detector</h1>
+  <h1>Mobile Object Detector</h1>
   <div class="info small">Continuous detection & distance</div>
 </header>
 
@@ -55,12 +55,10 @@ footer{font-size:12px;color:#9aa;margin-top:6px;text-align:center}
   </div>
 </div>
 
-<footer>Tips: steady camera, good lighting. Calibrate for distance. Works on mobile Chrome.</footer>
+<footer>Tips: steady camera, good lighting. Calibrate for distance. Works on mobile Chrome/Safari.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.4.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.2.1/dist/mobilenet.min.js"></script>
-
 <script>
 const video=document.getElementById('video');
 const overlay=document.getElementById('overlay');
@@ -70,13 +68,15 @@ const toggleBtn=document.getElementById('toggleBtn'), calibrateBtn=document.getE
 const knownWidthInput=document.getElementById('knownWidth'), knownDistanceInput=document.getElementById('knownDistance'), modeSel=document.getElementById('mode');
 
 let overlayCtx=overlay.getContext('2d');
-let model=null, classifier=null;
+let model=null;
 let detecting=true;
 let lastTime=performance.now(), frames=0, fps=0;
 let detInterval=250;
 let processW=320, processH=240;
 let focalLength=null;
 let lastDetections=[];
+let off=document.createElement('canvas'); // reusable offscreen canvas
+let offCtx=off.getContext('2d');
 
 // Start camera
 async function startCamera(){
@@ -94,23 +94,15 @@ async function startCamera(){
 function resizeCanvas(){
   overlay.width=video.clientWidth;
   overlay.height=video.clientHeight;
+  off.width=processW;
+  off.height=processH;
 }
 
-// Load models
+// Load model
 async function loadModels(){
   status.innerText='Loading coco-ssd…';
   model = await cocoSsd.load();
-  status.innerText='Loading mobilenet…';
-  classifier = await mobilenet.load();
-  status.innerText='Models ready';
-  await warmup();
-}
-
-async function warmup(){const t=tf.zeros([1,processH,processW,3]);try{await tf.nextFrame();t.dispose();}catch(e){}}
-
-// Refine label (return original label)
-function refineLabel(cocoLabel, cropTensor){
-  return Promise.resolve(cocoLabel); // use original coco-ssd labels
+  status.innerText='Models loaded';
 }
 
 // Detection loop
@@ -119,9 +111,6 @@ async function detectionLoop(){
   if(!detecting || !model) return;
   const start=performance.now();
 
-  const off=document.createElement('canvas');
-  off.width=processW; off.height=processH;
-  const offCtx=off.getContext('2d');
   offCtx.drawImage(video,0,0,off.width,off.height);
 
   let predictions=[];
@@ -130,31 +119,26 @@ async function detectionLoop(){
   const scaleX=overlay.width/off.width;
   const scaleY=overlay.height/off.height;
 
-  const refined=await Promise.all(predictions.map(async p=>{
-    const [x,y,w,h]=p.bbox;
-    return {...p, refinedLabel: await refineLabel(p.class,null)};
-  }));
-
-  lastDetections=refined;
-  drawDetections(refined,scaleX,scaleY);
+  lastDetections=predictions;
+  drawDetections(predictions,scaleX,scaleY);
 
   frames++; const now=performance.now();
   if(now-lastTime>=1000){fps=Math.round((frames*1000)/(now-lastTime));frames=0;lastTime=now;fpsEl.innerText='FPS: '+fps;}
-  detcountEl.innerText='Detections: '+refined.length;
+  detcountEl.innerText='Detections: '+predictions.length;
 
   const elapsed=performance.now()-start;
   const delay=Math.max(80,detInterval-elapsed);
   loopHandle=setTimeout(detectionLoop,delay);
 }
 
-// Draw boxes without fade
+// Draw detections
 function drawDetections(preds, scaleX, scaleY){
   overlayCtx.clearRect(0,0,overlay.width,overlay.height);
   overlayCtx.lineWidth=Math.max(2,Math.round(overlay.width*0.004));
   for(const p of preds){
     const [x,y,w,h]=p.bbox;
     const sx=x*scaleX, sy=y*scaleY, sw=w*scaleX, sh=h*scaleY;
-    const color=pickColor(p.refinedLabel||p.class);
+    const color=pickColor(p.class);
 
     overlayCtx.strokeStyle=color;
     overlayCtx.beginPath(); overlayCtx.rect(sx,sy,sw,sh); overlayCtx.stroke();
@@ -166,7 +150,7 @@ function drawDetections(preds, scaleX, scaleY){
       distanceText=(estimated_cm/100).toFixed(2)+' m';
     }
 
-    const label=(p.refinedLabel||p.class).toString();
+    const label=p.class;
     overlayCtx.font=`${Math.max(12,Math.round(overlay.width*0.03))}px sans-serif`;
     const txtW=overlayCtx.measureText(label+' • '+distanceText).width; const pad=6;
     overlayCtx.fillStyle=hexToRgba(color,0.7);
@@ -205,6 +189,7 @@ modeSel.addEventListener('change',()=>{
   if(m==='fast'){detInterval=150;processW=240;processH=160;}
   else if(m==='accurate'){detInterval=400;processW=480;processH=360;}
   else{detInterval=250;processW=320;processH=240;}
+  off.width=processW; off.height=processH;
 });
 
 // Init
