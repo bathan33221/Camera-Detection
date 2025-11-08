@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Smart Mobile Detector — Continuous Detection</title>
+<title>Smart Mobile Detector — Clean & Accurate</title>
 <style>
-:root{--bg:#0b0b0b;--panel:#111;--accent:#4ee;--text:#e6f7ff}
-body{margin:0;font-family:system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px}
+body{margin:0;font-family:system-ui,Roboto,Arial;background:#0b0b0b;color:#e6f7ff;display:flex;flex-direction:column;align-items:center;padding:10px;gap:8px}
 header{width:100%;display:flex;justify-content:space-between;align-items:center}
 h1{font-size:16px;margin:0}
 #wrap{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center}
@@ -14,10 +13,10 @@ video{width:100%;height:auto;border-radius:12px;background:#000;}
 canvas{position:absolute;left:0;top:0;pointer-events:none}
 .viewer{position:relative;width:100%}
 .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
-button,input,select{padding:8px;border-radius:8px;border:0;background:var(--panel);color:var(--text)}
+button,input,select{padding:8px;border-radius:8px;border:0;background:#111;color:#e6f7ff}
 .info{font-size:13px;opacity:.9}
 .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.5);padding:6px;border-radius:8px;font-weight:600}
-footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
+footer{font-size:12px;color:#9aa;margin-top:6px;text-align:center}
 .small{font-size:12px;opacity:.9}
 .calbox{display:flex;gap:6px;align-items:center}
 </style>
@@ -25,7 +24,7 @@ footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
 <body>
 <header>
   <h1>Smart Mobile Detector</h1>
-  <div class="info small">Continuous, smooth detection with distance</div>
+  <div class="info small">Continuous detection & distance</div>
 </header>
 
 <div id="wrap">
@@ -37,7 +36,7 @@ footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
 
   <div class="controls">
     <button id="toggleBtn">Stop Detection</button>
-    <button id="calibrateBtn">Calibrate (distance in meters)</button>
+    <button id="calibrateBtn">Calibrate</button>
     <div class="calbox">
       <input id="knownWidth" placeholder="Known width cm" style="width:110px" />
       <input id="knownDistance" placeholder="Distance cm" style="width:110px" />
@@ -56,21 +55,21 @@ footer{font-size:12px;color:#9aa; margin-top:6px;text-align:center}
   </div>
 </div>
 
-<footer>Tips: steady camera, good lighting. Calibrate for accurate distance. Works on mobile Chrome.</footer>
+<footer>Tips: steady camera, good lighting. Calibrate for distance. Works on mobile Chrome.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.4.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.2.1/dist/mobilenet.min.js"></script>
 
 <script>
-const video = document.getElementById('video');
-const overlay = document.getElementById('overlay');
-const status = document.getElementById('status');
-const fpsEl = document.getElementById('fps'), detcountEl = document.getElementById('detcount'), calinfo = document.getElementById('calinfo');
-const toggleBtn = document.getElementById('toggleBtn'), calibrateBtn = document.getElementById('calibrateBtn');
-const knownWidthInput = document.getElementById('knownWidth'), knownDistanceInput = document.getElementById('knownDistance'), modeSel = document.getElementById('mode');
+const video=document.getElementById('video');
+const overlay=document.getElementById('overlay');
+const status=document.getElementById('status');
+const fpsEl=document.getElementById('fps'), detcountEl=document.getElementById('detcount'), calinfo=document.getElementById('calinfo');
+const toggleBtn=document.getElementById('toggleBtn'), calibrateBtn=document.getElementById('calibrateBtn');
+const knownWidthInput=document.getElementById('knownWidth'), knownDistanceInput=document.getElementById('knownDistance'), modeSel=document.getElementById('mode');
 
-let overlayCtx = overlay.getContext('2d');
+let overlayCtx=overlay.getContext('2d');
 let model=null, classifier=null;
 let detecting=true;
 let lastTime=performance.now(), frames=0, fps=0;
@@ -79,7 +78,7 @@ let processW=320, processH=240;
 let focalLength=null;
 let lastDetections=[];
 
-// Camera
+// Start camera
 async function startCamera(){
   try{await tf.setBackend('webgl');}catch(e){}
   const constraints={video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false};
@@ -109,25 +108,9 @@ async function loadModels(){
 
 async function warmup(){const t=tf.zeros([1,processH,processW,3]);try{await tf.nextFrame();t.dispose();}catch(e){}}
 
-// Refine label
+// Refine label (return original label)
 function refineLabel(cocoLabel, cropTensor){
-  if(!classifier) return Promise.resolve(cocoLabel);
-  return classifier.classify(cropTensor,3).then(preds=>{
-    if(!preds || preds.length===0) return cocoLabel;
-    const top=preds[0];
-    if(top.prob && top.prob>0.5){
-      const name=top.className.split(',')[0].toLowerCase();
-      if(name.includes('helmet')) return 'helmet';
-      if(name.includes('apple')) return 'apple';
-      if(name.includes('banana')) return 'banana';
-      if(name.includes('bed')) return 'bed';
-      if(name.includes('chair')||name.includes('sofa')||name.includes('couch')) return 'chair';
-      if(name.includes('bottle')) return 'bottle';
-      if(name.includes('person')) return 'person';
-      return name;
-    }
-    return cocoLabel;
-  }).catch(()=>cocoLabel);
+  return Promise.resolve(cocoLabel); // use original coco-ssd labels
 }
 
 // Detection loop
@@ -149,12 +132,7 @@ async function detectionLoop(){
 
   const refined=await Promise.all(predictions.map(async p=>{
     const [x,y,w,h]=p.bbox;
-    const cropCanvas=document.createElement('canvas');
-    cropCanvas.width=Math.min(224,w); cropCanvas.height=Math.min(224,h);
-    const cctx=cropCanvas.getContext('2d');
-    cctx.drawImage(off,x,y,w,h,0,0,cropCanvas.width,cropCanvas.height);
-    const refinedLabel=await refineLabel(p.class,cropCanvas).catch(()=>p.class);
-    return {...p, refinedLabel};
+    return {...p, refinedLabel: await refineLabel(p.class,null)};
   }));
 
   lastDetections=refined;
@@ -169,17 +147,16 @@ async function detectionLoop(){
   loopHandle=setTimeout(detectionLoop,delay);
 }
 
-// Draw boxes with fading
+// Draw boxes without fade
 function drawDetections(preds, scaleX, scaleY){
-  overlayCtx.fillStyle='rgba(0,0,0,0.15)';
-  overlayCtx.fillRect(0,0,overlay.width,overlay.height);
-
+  overlayCtx.clearRect(0,0,overlay.width,overlay.height);
   overlayCtx.lineWidth=Math.max(2,Math.round(overlay.width*0.004));
   for(const p of preds){
     const [x,y,w,h]=p.bbox;
     const sx=x*scaleX, sy=y*scaleY, sw=w*scaleX, sh=h*scaleY;
     const color=pickColor(p.refinedLabel||p.class);
-    overlayCtx.strokeStyle=color; overlayCtx.fillStyle=color;
+
+    overlayCtx.strokeStyle=color;
     overlayCtx.beginPath(); overlayCtx.rect(sx,sy,sw,sh); overlayCtx.stroke();
 
     let distanceText='—';
@@ -190,13 +167,12 @@ function drawDetections(preds, scaleX, scaleY){
     }
 
     const label=(p.refinedLabel||p.class).toString();
-    const txt=label+' • '+distanceText;
-
     overlayCtx.font=`${Math.max(12,Math.round(overlay.width*0.03))}px sans-serif`;
-    const txtW=overlayCtx.measureText(txt).width; const pad=6;
-    overlayCtx.fillStyle=hexToRgba(color,0.85);
-    overlayCtx.fillRect(sx,Math.max(0,sy-24),txtW+pad*2,22);
-    overlayCtx.fillStyle='#000'; overlayCtx.fillText(txt,sx+pad,Math.max(14,sy-6));
+    const txtW=overlayCtx.measureText(label+' • '+distanceText).width; const pad=6;
+    overlayCtx.fillStyle=hexToRgba(color,0.7);
+    overlayCtx.fillRect(sx,Math.max(0,sy-22),txtW+pad*2,20);
+    overlayCtx.fillStyle='#fff';
+    overlayCtx.fillText(label+' • '+distanceText, sx+pad, Math.max(14,sy-6));
   }
 }
 
