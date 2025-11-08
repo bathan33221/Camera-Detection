@@ -1,60 +1,43 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Hassan Jan — Hacker Detector</title>
-<!-- Hacker-style UI: neon green on dark, monospace -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hassan Jan — Hacker Detector (Upscaled)</title>
 <style>
-  :root{
-    --bg:#051014;
-    --panel:#07121a;
-    --neon:#57ff7b;
-    --muted:#8fb3a1;
-    --accent:#00e6ac;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#00121a 0%, #051014 100%);color:var(--neon);font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px}
-  header{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#002b1f,#004433);display:flex;align-items:center;justify-content:center;font-weight:700;color:#001;box-shadow:0 6px 20px rgba(0,250,150,0.06)}
-  h1{margin:0;font-size:18px;color:var(--neon);letter-spacing:0.6px}
-  .sub{color:var(--muted);font-size:12px}
-  #wrap{width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;gap:10px}
-  .viewer{position:relative;width:100%;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.6)}
-  video{width:100%;height:auto;display:block}
-  canvas{position:absolute;left:0;top:0;pointer-events:none}
-  .ui{width:100%;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px;background:linear-gradient(180deg,var(--panel), rgba(7,18,26,0.75));border-radius:10px;border:1px solid rgba(0,255,130,0.04)}
-  .left, .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  button,input,select{background:transparent;border:1px solid rgba(90,255,150,0.06);color:var(--neon);padding:8px 10px;border-radius:8px;font-family:inherit}
-  button.primary{background:linear-gradient(90deg, rgba(0,255,140,0.06), rgba(0,230,120,0.03));border:1px solid rgba(0,255,140,0.18);box-shadow:0 6px 18px rgba(0,200,120,0.03)}
-  .small{font-size:12px;color:var(--muted)}
-  .badge{background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:8px;border:1px solid rgba(90,255,150,0.04);font-weight:600}
-  .stat{display:flex;gap:8px;align-items:center;color:var(--muted)}
-  .terminal{width:100%;max-width:900px;background:#021212;border-radius:10px;padding:10px;color:var(--neon);font-size:13px;border:1px solid rgba(0,255,140,0.03)}
-  footer{color:var(--muted);font-size:12px;opacity:0.9}
-  a.link{color:var(--accent);text-decoration:none}
-  /* responsive */
-  @media (max-width:640px){
-    .ui{flex-direction:column;align-items:stretch}
-    .left,.right{width:100%;justify-content:flex-start}
-  }
+:root{
+  --bg:#051014;--panel:#07121a;--neon:#57ff7b;--muted:#8fb3a1;--accent:#00e6ac;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--neon);font-family:ui-monospace,monospace;display:flex;flex-direction:column;align-items:center;padding:12px;gap:8px}
+header{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:18px;color:var(--neon)}
+.sub{color:var(--muted);font-size:12px}
+#wrap{width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.viewer{position:relative;width:100%;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+video{width:100%;height:auto;display:block;transform:scaleX(1)}
+canvas{position:absolute;left:0;top:0;pointer-events:none}
+.ui{width:100%;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px;background:var(--panel);border-radius:10px;border:1px solid rgba(0,255,130,0.04)}
+.left, .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button,input,select{background:transparent;border:1px solid rgba(90,255,150,0.06);color:var(--neon);padding:6px 10px;border-radius:8px;font-family:inherit}
+button.primary{background:linear-gradient(90deg, rgba(0,255,140,0.06), rgba(0,230,120,0.03));border:1px solid rgba(0,255,140,0.18);box-shadow:0 6px 18px rgba(0,200,120,0.03)}
+.small{font-size:12px;color:var(--muted)}
+.badge{background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:8px;border:1px solid rgba(90,255,150,0.04);font-weight:600}
+.terminal{width:100%;max-width:900px;background:#021212;border-radius:10px;padding:10px;color:var(--neon);font-size:13px;border:1px solid rgba(0,255,140,0.03)}
+footer{color:var(--muted);font-size:12px;opacity:0.9}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">
-    <div class="logo">HJ</div>
-    <div>
-      <h1>Hassan Jan — Hacker Detector</h1>
-      <div class="sub">Neon realtime object detection • mobile optimized</div>
-    </div>
+  <div>
+    <h1>Hassan Jan — Hacker Detector (Upscaled)</h1>
+    <div class="sub">Optimized for Tecno Spark 10 Pro</div>
   </div>
-  <div class="badge">v1.0 • Local • Privacy: on-device</div>
+  <div class="badge">v1.1 • Local</div>
 </header>
 
 <div id="wrap">
-  <div class="viewer" id="viewer">
+  <div class="viewer">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="overlay"></canvas>
     <div style="position:absolute;right:10px;top:10px" class="badge" id="status">Loading models…</div>
@@ -65,327 +48,157 @@
       <button id="toggleBtn" class="primary">Stop</button>
       <button id="snapshotBtn">Snapshot</button>
       <button id="downloadJSON">Download JSON</button>
-      <label><input id="showBoxes" type="checkbox" checked /> Show boxes</label>
-      <label class="small">Refine labels: <input id="refineToggle" type="checkbox" /></label>
+      <label><input id="showBoxes" type="checkbox" checked> Show boxes</label>
     </div>
-
     <div class="right">
-      <div class="stat small">Mode:
+      <span class="small">Mode:
         <select id="mode">
           <option value="balanced">Balanced</option>
           <option value="fast">Fast</option>
           <option value="accurate">Accurate</option>
         </select>
-      </div>
-
-      <div class="stat small">FPS: <span id="fps">—</span></div>
-      <div class="stat small">Det: <span id="detcount">—</span></div>
-      <div class="stat small">Cal: <span id="calinfo">not set</span></div>
+      </span>
+      <span class="small">FPS: <span id="fps">—</span></span>
+      <span class="small">Det: <span id="detcount">—</span></span>
     </div>
   </div>
 
   <div class="terminal small" id="log">
-    <div>> Ready. Use <strong>Calibrate</strong> for distance (credit card ≈ 8.56 cm).</div>
-  </div>
-
-  <div class="ui">
-    <div class="left">
-      <input id="knownWidth" placeholder="known width cm (e.g. 8.56)" style="width:160px" />
-      <input id="knownDistance" placeholder="distance cm (e.g. 50)" style="width:160px" />
-      <button id="calibrateBtn">Calibrate</button>
-    </div>
-    <div class="right small">
-      <span>Author: <strong>Hassan Jan</strong></span>
-    </div>
+    <div>> Ready. Upscaled live camera & fast detection.</div>
   </div>
 </div>
+<footer>All processing runs locally — camera feed is upscaled for clarity.</footer>
 
-<footer>Tip: Open with Chrome on mobile for best performance. All processing runs locally — nothing uploaded.</footer>
-
-<!-- TFJS + coco-ssd -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.4.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
 <script>
-/*
-  Hassan Jan — Upgraded single-file mobile detector
-  - No per-frame canvas creation (reuses offscreen canvas)
-  - Disposes tensors / uses tf engine carefully
-  - Option to refine labels (mobilenet) - kept optional
-  - Clean, neon UI and snapshot/download
-  - Distance via calibration
-*/
-
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
 const statusEl = document.getElementById('status');
 const fpsEl = document.getElementById('fps');
 const detCountEl = document.getElementById('detcount');
-const calinfo = document.getElementById('calinfo');
 const logEl = document.getElementById('log');
 
 const toggleBtn = document.getElementById('toggleBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
 const downloadJSONBtn = document.getElementById('downloadJSON');
 const showBoxesChk = document.getElementById('showBoxes');
-const refineToggle = document.getElementById('refineToggle');
 const modeSel = document.getElementById('mode');
-const calibrateBtn = document.getElementById('calibrateBtn');
-const knownWidthInput = document.getElementById('knownWidth');
-const knownDistanceInput = document.getElementById('knownDistance');
 
-const overlayCtx = overlay.getContext('2d');
+let detector=null, detecting=true, lastDetections=[];
+let processW=320, processH=240, detInterval=220;
+let loopHandle=null, fps=0, frames=0, lastTime=performance.now();
+let off=document.createElement('canvas'), offCtx=off.getContext('2d');
 
-// models & state
-let detector = null;
-let classifier = null; // optional mobilenet if refine enabled
-let detecting = true;
-let lastDetections = [];
-let focal = null; // {focalPx, realWidthCm}
-let off = document.createElement('canvas');
-let offCtx = off.getContext('2d');
-let processW = 320, processH = 240;
-let detInterval = 220;
-let loopHandle = null;
-let fps = 0, frames = 0, lastTime = performance.now();
-
-// safety: ensure single init
-let inited = false;
-
-// small logger
-function log(msg) {
-  const now = new Date().toLocaleTimeString();
-  logEl.innerHTML = `<div>> [${now}] ${msg}</div>` + logEl.innerHTML;
+async function startCamera(){
+  try{await tf.setBackend('webgl');}catch(e){}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});
+    video.srcObject=stream;
+    await video.play();
+    resizeCanvas();
+    window.addEventListener('resize',resizeCanvas);
+    logEl.innerHTML+="<div>> Camera started</div>";
+  }catch(e){alert('Camera access denied: '+e.message);statusEl.textContent='Camera error';throw e;}
 }
 
-// pick color by label
-function pickColor(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+function resizeCanvas(){
+  overlay.width=video.clientWidth;
+  overlay.height=video.clientHeight;
+  off.width=processW; off.height=processH;
+}
+
+async function loadModel(){
+  statusEl.textContent='Loading coco-ssd...';
+  detector = await cocoSsd.load();
+  statusEl.textContent='Model ready';
+}
+
+function pickColor(s){
+  let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;
   return `hsl(${h}deg 85% 55%)`;
 }
 
-// hex via canvas
-function hexToRgba(hsl, a=1) {
-  const c = document.createElement('canvas'); c.width = 1; c.height = 1;
-  const cx = c.getContext('2d'); cx.fillStyle = hsl; cx.fillRect(0,0,1,1);
-  const d = cx.getImageData(0,0,1,1).data;
-  return `rgba(${d[0]},${d[1]},${d[2]},${a})`;
+function hexToRgba(hsl,a=1){const c=document.createElement('canvas');c.width=1;c.height=1;const cx=c.getContext('2d');cx.fillStyle=hsl;cx.fillRect(0,0,1,1);const d=cx.getImageData(0,0,1,1).data;return `rgba(${d[0]},${d[1]},${d[2]},${a})`;}
+
+// detection loop
+async function detectLoop(){
+  if(!detecting||!detector) return;
+  const start=performance.now();
+  offCtx.drawImage(video,0,0,off.width,off.height);
+  let preds=[];
+  try{preds=await detector.detect(off);}catch(e){preds=[];}
+  lastDetections=preds;
+  draw(preds);
+  frames++; const now=performance.now();
+  if(now-lastTime>=1000){fps=Math.round((frames*1000)/(now-lastTime));frames=0;lastTime=now;fpsEl.textContent=fps;}
+  detCountEl.textContent=preds.length;
+  const elapsed=performance.now()-start;
+  const delay=Math.max(60,detInterval-elapsed);
+  loopHandle=setTimeout(detectLoop,delay);
 }
 
-// start camera with constraints
-async function startCamera() {
-  try { await tf.setBackend('webgl'); } catch(e){ console.warn('webgl backend failed',e); }
-  const constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = stream;
-    await video.play();
-    resizeCanvases();
-    window.addEventListener('resize', resizeCanvases);
-    log('Camera started');
-  } catch (err) {
-    alert('Camera error: ' + err.message);
-    statusEl.textContent = 'Camera error';
-    throw err;
-  }
-}
-
-function resizeCanvases() {
-  overlay.width = video.clientWidth;
-  overlay.height = video.clientHeight;
-  off.width = processW;
-  off.height = processH;
-}
-
-// load models
-async function loadModels() {
-  statusEl.textContent = 'Loading coco-ssd...';
-  detector = await cocoSsd.load();
-  statusEl.textContent = 'Model ready';
-  log('coco-ssd loaded');
-  // classifier loaded lazily only if user enables refine
-}
-
-// optional classifier loader
-async function ensureClassifier() {
-  if (classifier) return;
-  statusEl.textContent = 'Loading mobilenet (refine)...';
-  classifier = await tf.loadGraphModel('https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/classification/4', {fromTFHub: true}).catch(()=>null);
-  // Note: explicit mobilenet via tfhub may vary by browser. If not available, we keep classifier null.
-  if (classifier) statusEl.textContent = 'Refine model ready';
-  else statusEl.textContent = 'Refine not available';
-}
-
-// detection loop (memory-safe)
-async function detectionLoop() {
-  if (!detecting || !detector) return;
-  const start = performance.now();
-
-  // draw reduced frame to offscreen canvas (reused)
-  offCtx.drawImage(video, 0, 0, off.width, off.height);
-
-  // run detection on off canvas
-  let predictions = [];
-  try {
-    // coco-ssd accepts HTMLCanvasElement directly
-    predictions = await detector.detect(off);
-  } catch (e) {
-    console.warn('detect error', e);
-    predictions = [];
-  }
-
-  // store and draw
-  lastDetections = predictions;
-  draw(predictions);
-
-  // fps
-  frames++;
-  const now = performance.now();
-  if (now - lastTime >= 1000) { fps = Math.round((frames*1000)/(now-lastTime)); frames = 0; lastTime = now; fpsEl.textContent = fps; }
-  detCountEl.textContent = predictions.length;
-
-  const elapsed = performance.now() - start;
-  const delay = Math.max(60, detInterval - elapsed);
-  loopHandle = setTimeout(detectionLoop, delay);
-}
-
-// draw function: clears each frame (no fade) and draws boxes + labels
-function draw(preds) {
+// draw detections
+function draw(preds){
   overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-  overlayCtx.textBaseline = 'top';
-
-  const scaleX = overlay.width / off.width;
-  const scaleY = overlay.height / off.height;
-
-  if (!showBoxesChk.checked) return;
-
-  for (const p of preds) {
-    // Use original coco label
-    const label = p.class;
-    const [x,y,w,h] = p.bbox;
-    const sx = x * scaleX, sy = y * scaleY, sw = w * scaleX, sh = h * scaleY;
-
-    const color = pickColor(label);
-    const bg = hexToRgba(color, 0.75);
-
-    // box
-    overlayCtx.lineWidth = Math.max(2, Math.round(overlay.width * 0.004));
-    overlayCtx.strokeStyle = color;
-    overlayCtx.beginPath();
-    overlayCtx.rect(sx, sy, sw, sh);
-    overlayCtx.stroke();
-
-    // distance
-    let distanceText = '—';
-    if (focal && w > 2) {
-      // pixelWidth measured on off canvas scale
-      const pixelWidthAtProcess = w;
-      const estimatedCm = (focal.realWidthCm * focal.focalPx) / Math.max(pixelWidthAtProcess,1);
-      distanceText = (estimatedCm/100).toFixed(2) + ' m';
-    }
-
-    const txt = `${label} • ${distanceText}`;
-    overlayCtx.font = `${Math.max(11, Math.round(overlay.width*0.028))}px monospace`;
-    const txtW = overlayCtx.measureText(txt).width;
-    const pad = 6;
-
-    // label background
-    overlayCtx.fillStyle = bg;
-    overlayCtx.fillRect(sx, Math.max(0, sy - 22), txtW + pad*2, 20);
-    // label text
-    overlayCtx.fillStyle = '#001';
-    overlayCtx.fillText(txt, sx + pad, Math.max(0, sy - 20));
+  const scaleX=overlay.width/off.width, scaleY=overlay.height/off.height;
+  if(!showBoxesChk.checked) return;
+  for(const p of preds){
+    const [x,y,w,h]=p.bbox;
+    const sx=x*scaleX, sy=y*scaleY, sw=w*scaleX, sh=h*scaleY;
+    const color=pickColor(p.class);
+    const bg=hexToRgba(color,0.75);
+    overlayCtx.lineWidth=Math.max(2,Math.round(overlay.width*0.004));
+    overlayCtx.strokeStyle=color;
+    overlayCtx.beginPath(); overlayCtx.rect(sx,sy,sw,sh); overlayCtx.stroke();
+    overlayCtx.font=`${Math.max(11,Math.round(overlay.width*0.028))}px monospace`;
+    const txt=p.class, pad=6, txtW=overlayCtx.measureText(txt).width;
+    overlayCtx.fillStyle=bg;
+    overlayCtx.fillRect(sx,Math.max(0,sy-22),txtW+pad*2,20);
+    overlayCtx.fillStyle='#001';
+    overlayCtx.fillText(txt,sx+pad,Math.max(0,sy-20));
   }
-}
-
-// calibrate: compute focal based on shown object
-function calibrate() {
-  const kw = parseFloat(knownWidthInput.value);
-  const kd = parseFloat(knownDistanceInput.value);
-  if (!kw || !kd) { alert('Enter known width (cm) and distance (cm)'); return; }
-  if (!lastDetections || lastDetections.length === 0) { alert('Show the reference object for calibration'); return; }
-  // pick largest detection as reference
-  let best = lastDetections.reduce((a,b)=> (b.bbox[2] > a.bbox[2] ? b : a), lastDetections[0]);
-  const pixelWidth = best.bbox[2]; // width on process canvas
-  const focalPx = (pixelWidth * kd) / kw; // px*cm
-  focal = { focalPx, realWidthCm: kw };
-  calinfo.textContent = `W=${kw}cm @ ${kd}cm`;
-  log('Calibrated — distances enabled');
 }
 
 // snapshot
-function snapshot() {
-  const snapCanvas = document.createElement('canvas');
-  snapCanvas.width = overlay.width;
-  snapCanvas.height = overlay.height;
-  const sctx = snapCanvas.getContext('2d');
-  sctx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
-  sctx.drawImage(overlay, 0, 0, snapCanvas.width, snapCanvas.height);
-  const data = snapCanvas.toDataURL('image/png');
-  // open in new tab for save
-  const w = window.open('', '_blank');
-  w.document.write(`<img src="${data}" style="max-width:100%"/>`);
-}
-
-// download JSON of last detections
-function downloadJSON() {
-  const data = { ts: Date.now(), detections: lastDetections };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'detections.json';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// UI handlers
-toggleBtn.addEventListener('click', ()=> {
-  detecting = !detecting;
-  toggleBtn.textContent = detecting ? 'Stop' : 'Start';
-  if (detecting) detectionLoop();
-  else { if (loopHandle) clearTimeout(loopHandle); overlayCtx.clearRect(0,0,overlay.width,overlay.height); log('Detection paused'); }
-});
-snapshotBtn.addEventListener('click', snapshot);
-downloadJSONBtn.addEventListener('click', downloadJSON);
-calibrateBtn.addEventListener('click', calibrate);
-modeSel.addEventListener('change', ()=> {
-  const m = modeSel.value;
-  if (m === 'fast') { detInterval = 140; processW = 240; processH = 160; }
-  else if (m === 'accurate') { detInterval = 380; processW = 480; processH = 360; }
-  else { detInterval = 220; processW = 320; processH = 240; }
-  off.width = processW; off.height = processH;
-  log('Mode set to ' + m);
-});
-refineToggle.addEventListener('change', async (e) => {
-  if (e.target.checked) {
-    log('Refine enabled — attempting to load classifier (may be large)');
-    await ensureClassifier();
-  } else { log('Refine disabled'); }
+snapshotBtn.addEventListener('click',()=>{
+  const c=document.createElement('canvas'); c.width=overlay.width; c.height=overlay.height;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(video,0,0,c.width,c.height);
+  ctx.drawImage(overlay,0,0,c.width,c.height);
+  const data=c.toDataURL('image/png'); const w=window.open(); w.document.write('<img src="'+data+'">');
 });
 
-// initialization
-(async function init(){
-  if (inited) return;
-  inited = true;
-  try {
-    statusEl.textContent = 'Starting camera...';
-    await startCamera();
-    statusEl.textContent = 'Loading model...';
-    await loadModels();
-    statusEl.textContent = 'Ready — detecting';
-    setTimeout(()=>{ detectionLoop(); }, 300);
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = 'Init failed';
-    log('Init error: ' + (err.message || err));
-  }
+// download JSON
+downloadJSONBtn.addEventListener('click',()=>{
+  const data=JSON.stringify({ts:Date.now(),detections:lastDetections},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='detections.json'; a.click(); URL.revokeObjectURL(url);
+});
+
+// toggle detection
+toggleBtn.addEventListener('click',()=>{
+  detecting=!detecting; toggleBtn.textContent=detecting?'Stop':'Start';
+  if(detecting) detectLoop(); else if(loopHandle) clearTimeout(loopHandle);
+});
+
+// mode
+modeSel.addEventListener('change',()=>{
+  const m=modeSel.value;
+  if(m==='fast'){detInterval=140;processW=240;processH=160;}
+  else if(m==='accurate'){detInterval=380;processW=480;processH=360;}
+  else {detInterval=220;processW=320;processH=240;}
+  off.width=processW; off.height=processH;
+});
+
+// init
+(async()=>{
+  await startCamera();
+  await loadModel();
+  statusEl.textContent='Ready — upscaled feed';
+  detectLoop();
 })();
-
-// cleanup
-window.addEventListener('beforeunload', ()=> {
-  try { const s = video.srcObject; if (s) s.getTracks().forEach(t => t.stop()); } catch(e){}
-});
 </script>
 </body>
 </html>
